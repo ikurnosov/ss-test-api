@@ -5,20 +5,21 @@ namespace App\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
-use App\Client;
+use App\Models\Client;
 
 class FinanceController extends Controller
 {
     public function balance(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        $input = $request->all();
+        $validator = Validator::make($input, [
             'user' => 'required|integer|min:1'
         ]);
         if ($validator->fails()) {
             return JsonResponse::create(array('errors' => $validator->errors()), 422);
         }
 
-        $client = Client::where('id', $request->get('user'))->first();
+        $client = Client::where('id', $input['user'])->first();
         if (is_null($client)) {
             return JsonResponse::create(array('errors' => array('Such user cannot be found')), 422);
         }
@@ -28,7 +29,8 @@ class FinanceController extends Controller
 
     public function deposit(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        $input = $request->all();
+        $validator = Validator::make($input, [
             'user' => 'required|integer|min:1',
             'amount' => 'required|integer|min:0'
         ]);
@@ -36,8 +38,8 @@ class FinanceController extends Controller
             return JsonResponse::create(array('errors' => $validator->errors()), 422);
         }
 
-        $client = Client::firstOrNew(array('id' => $request->get('user')));
-        $client->balance += $request->get('amount');
+        $client = Client::firstOrNew(array('id' => $input['user']));
+        $client->balance += $input['amount'];
         $client->save();
 
         // It's better to send result, if frontend is using response for rendering SPA
@@ -48,7 +50,8 @@ class FinanceController extends Controller
 
     public function withdraw(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        $input = $request->all();
+        $validator = Validator::make($input, [
             'user' => 'required|integer|min:1',
             'amount' => 'required|integer|min:0'
         ]);
@@ -56,14 +59,14 @@ class FinanceController extends Controller
             return JsonResponse::create(array('errors' => $validator->errors()), 422);
         }
 
-        $client = Client::where('id', $request->get('user'))->first();
+        $client = Client::where('id', $input['user'])->first();
         if (is_null($client)) {
             return JsonResponse::create(array('errors' => array('Such user cannot be found')), 422);
         }
-        if ($client->balance < $request->get('amount')) {
+        if ($client->balance < $input['amount']) {
             return JsonResponse::create(array('errors' => array('Not enough money')), 422);
         }
-        $client->balance -= $request->get('amount');
+        $client->balance -= $input['amount'];
         $client->save();
 
         // It's better to send result, if frontend is using response for rendering SPA
