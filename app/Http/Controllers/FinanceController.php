@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use App\Models\Client;
+use Illuminate\Support\Facades\DB;
 
 class FinanceController extends Controller
 {
@@ -38,9 +39,15 @@ class FinanceController extends Controller
             return JsonResponse::create(array('errors' => $validator->errors()), 422);
         }
 
-        $client = Client::firstOrNew(array('id' => $input['user']));
-        $client->balance += $input['amount'];
-        $client->save();
+        DB::beginTransaction();
+        try {
+            $client = Client::firstOrNew(array('id' => $input['user']));
+            $client->balance += $input['amount'];
+            $client->save();
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+        }
 
         // It's better to send result, if frontend is using response for rendering SPA
         //return JsonResponse::create(array('user' => $client->id, 'balance' => $client->balance));
@@ -66,8 +73,15 @@ class FinanceController extends Controller
         if ($client->balance < $input['amount']) {
             return JsonResponse::create(array('errors' => array('Not enough money')), 422);
         }
-        $client->balance -= $input['amount'];
-        $client->save();
+
+        DB::beginTransaction();
+        try {
+            $client->balance -= $input['amount'];
+            $client->save();
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+        }
 
         // It's better to send result, if frontend is using response for rendering SPA
         //return JsonResponse::create(array('user' => $client->id, 'balance' => $client->balance));
@@ -99,10 +113,17 @@ class FinanceController extends Controller
         if ($clientFrom->balance < $input['amount']) {
             return JsonResponse::create(array('errors' => array('Not enough money')), 422);
         }
-        $clientFrom->balance -= $input['amount'];
-        $clientFrom->save();
-        $clientTo->balance += $input['amount'];
-        $clientTo->save();
+
+        DB::beginTransaction();
+        try {
+            $clientFrom->balance -= $input['amount'];
+            $clientFrom->save();
+            $clientTo->balance += $input['amount'];
+            $clientTo->save();
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+        }
 
         // It's better to send result, if frontend is using response for rendering SPA
         /*return JsonResponse::create(
